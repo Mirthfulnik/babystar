@@ -3,7 +3,7 @@
 <head>
 <meta property="og:url" content="https://mirthfulnik.github.io/babystar/">
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <!-- ── Primary meta ── -->
 <title>Baby Star ⭐ — Зачатие по знаку зодиака</title>
@@ -397,16 +397,14 @@
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: var(--rose); border-radius: 10px; }
 
-  /* ── Tooltip ── */
+  /* ── Label row ── */
   .label-row {
     display: flex; align-items: center; gap: .4rem;
     margin-bottom: .45rem;
   }
   .label-row label { margin-bottom: 0; }
 
-  .tooltip-wrap {
-    position: relative; display: inline-flex; align-items: center;
-  }
+  /* ── ? button ── */
   .tooltip-btn {
     width: 17px; height: 17px;
     border-radius: 50%;
@@ -417,60 +415,81 @@
     line-height: 1;
     cursor: pointer;
     display: inline-flex; align-items: center; justify-content: center;
-    transition: all .18s;
+    transition: background .18s, border-color .18s, color .18s;
     padding: 0; flex-shrink: 0;
     font-family: 'Nunito', sans-serif;
   }
-  .tooltip-btn:hover {
+  .tooltip-btn:hover, .tooltip-btn:focus {
     background: var(--rose); border-color: var(--accent); color: var(--accent2);
+    outline: none;
   }
 
-  /* Tooltip overlay — fixed on mobile so it never overflows the screen */
-  .tooltip-box {
-    display: none;
-    position: fixed;
-    width: calc(100vw - 2rem);
-    max-width: 300px;
-    background: rgba(255,255,255,0.98);
-    border: 1.5px solid var(--rose);
-    border-radius: 14px;
-    padding: .75rem .9rem;
-    font-size: .82rem;
-    color: var(--text);
-    line-height: 1.55;
-    box-shadow: 0 8px 28px rgba(180,120,160,.22);
-    z-index: 9999;
-    pointer-events: none;
-    /* Position set by JS */
-    top: 0; left: 1rem;
-  }
-  /* Arrow points DOWN by default (tooltip is above the button) */
-  .tooltip-box::after {
-    content: '';
-    position: absolute;
-    top: 100%;
-    left: var(--arrow-left, 50%);
-    transform: translateX(-50%);
-    border: 6px solid transparent;
-    border-top-color: var(--rose);
-  }
-  /* Arrow points UP when tooltip is below the button */
-  .tooltip-box[data-arrow-dir="up"]::after {
-    top: auto;
-    bottom: 100%;
-    border-top-color: transparent;
-    border-bottom-color: var(--rose);
-  }
-  .tooltip-wrap.active .tooltip-box { display: block; }
-
-  /* Backdrop to close tooltip on mobile tap */
-  .tooltip-backdrop {
+  /* ── Popup overlay ── */
+  .popup-overlay {
     display: none;
     position: fixed; inset: 0;
-    z-index: 9998;
-    background: transparent;
+    background: rgba(90, 65, 85, 0.35);
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+    z-index: 9000;
+    align-items: center;
+    justify-content: center;
+    padding: 1.25rem;
   }
-  .tooltip-backdrop.active { display: block; }
+  .popup-overlay.visible {
+    display: flex;
+    animation: popupBgIn .2s ease both;
+  }
+  @keyframes popupBgIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+
+  .popup-card {
+    background: var(--white);
+    border-radius: 22px;
+    padding: 1.4rem 1.25rem 1.25rem;
+    max-width: 320px;
+    width: 100%;
+    position: relative;
+    box-shadow: 0 16px 48px rgba(140, 90, 130, 0.22);
+    animation: popupCardIn .25s cubic-bezier(.34,1.3,.64,1) both;
+  }
+  @keyframes popupCardIn {
+    from { opacity: 0; transform: scale(.88) translateY(12px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+  }
+  .popup-card.closing {
+    animation: popupCardOut .18s ease both;
+  }
+  @keyframes popupCardOut {
+    from { opacity: 1; transform: scale(1); }
+    to   { opacity: 0; transform: scale(.9); }
+  }
+
+  .popup-close {
+    position: absolute;
+    top: .75rem; right: .75rem;
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    border: none;
+    background: var(--blush);
+    color: var(--accent2);
+    font-size: 1rem; line-height: 1;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background .15s, transform .15s;
+    padding: 0;
+  }
+  .popup-close:hover { background: var(--rose); transform: scale(1.1); }
+
+  .popup-text {
+    font-family: 'Nunito', sans-serif;
+    font-size: .9rem;
+    color: var(--text);
+    line-height: 1.6;
+    padding-right: 1.5rem;
+  }
 
   /* ── Regularity buttons ── */
   .regularity-btns {
@@ -538,7 +557,14 @@
 </head>
 <body>
 
-<div class="tooltip-backdrop" id="tooltip-backdrop" onclick="closeAllTips()"></div>
+<!-- ── Global info popup ── -->
+<div class="popup-overlay" id="popup-overlay" onclick="handleOverlayClick(event)">
+  <div class="popup-card" id="popup-card">
+    <button class="popup-close" onclick="closePopup()" aria-label="Закрыть">✕</button>
+    <p class="popup-text" id="popup-text"></p>
+  </div>
+</div>
+
 <div class="bg-blobs">
   <div class="blob blob1"></div>
   <div class="blob blob2"></div>
@@ -712,70 +738,45 @@
 </div>
 
 <script>
-/* ── Tooltip: smart positioning so it never overflows screen ── */
-function positionTooltip(btn, box) {
-  const MARGIN = 12; // px from screen edge
-  const btnRect = btn.getBoundingClientRect();
-  const vw = window.innerWidth;
-  const vh = window.innerHeight;
-
-  // Box dimensions (it's display:block temporarily to measure)
-  box.style.display = 'block';
-  box.style.visibility = 'hidden';
-  const bw = box.offsetWidth;
-  const bh = box.offsetHeight;
-  box.style.visibility = '';
-
-  // Vertical: prefer above the button, fall back to below
-  let top;
-  const spaceAbove = btnRect.top - MARGIN;
-  const spaceBelow = vh - btnRect.bottom - MARGIN;
-
-  if (spaceAbove >= bh) {
-    top = btnRect.top - bh - 8;
-    // Arrow points down (default ::after)
-    box.dataset.arrowDir = 'down';
-  } else {
-    top = btnRect.bottom + 8;
-    box.dataset.arrowDir = 'up';
-  }
-
-  // Horizontal: center on button, clamp to screen
-  let left = btnRect.left + btnRect.width / 2 - bw / 2;
-  left = Math.max(MARGIN, Math.min(left, vw - bw - MARGIN));
-
-  box.style.top  = top + 'px';
-  box.style.left = left + 'px';
-
-  // Arrow horizontal offset — point to the button center
-  const arrowLeft = (btnRect.left + btnRect.width / 2) - left;
-  const arrowClamped = Math.max(14, Math.min(arrowLeft, bw - 14));
-  box.style.setProperty('--arrow-left', arrowClamped + 'px');
+/* ── Popup info system ── */
+function openPopup(text) {
+  const overlay = document.getElementById('popup-overlay');
+  const card    = document.getElementById('popup-card');
+  const textEl  = document.getElementById('popup-text');
+  textEl.textContent = text;
+  card.classList.remove('closing');
+  overlay.classList.add('visible');
+  // Prevent body scroll on iOS
+  document.body.style.overflow = 'hidden';
 }
 
-function closeAllTips() {
-  document.querySelectorAll('.tooltip-wrap.active').forEach(w => w.classList.remove('active'));
-  const bd = document.getElementById('tooltip-backdrop');
-  if (bd) bd.classList.remove('active');
+function closePopup() {
+  const overlay = document.getElementById('popup-overlay');
+  const card    = document.getElementById('popup-card');
+  card.classList.add('closing');
+  card.addEventListener('animationend', () => {
+    overlay.classList.remove('visible');
+    card.classList.remove('closing');
+    document.body.style.overflow = '';
+  }, { once: true });
 }
 
+function handleOverlayClick(e) {
+  // Close when clicking the dark backdrop (not the card itself)
+  if (e.target === document.getElementById('popup-overlay')) closePopup();
+}
+
+// Close on Escape key
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closePopup();
+});
+
+// toggleTip kept for backwards compatibility with onclick="toggleTip(this)"
 function toggleTip(btn) {
-  const wrap = btn.closest('.tooltip-wrap');
-  const box  = wrap.querySelector('.tooltip-box');
-  const isActive = wrap.classList.contains('active');
-
-  closeAllTips();
-
-  if (!isActive) {
-    wrap.classList.add('active');
-    positionTooltip(btn, box);
-    const bd = document.getElementById('tooltip-backdrop');
-    if (bd) bd.classList.add('active');
-  }
+  const box = btn.closest('.tooltip-wrap')?.querySelector('.tooltip-box');
+  const text = box ? box.textContent.trim() : btn.dataset.tip || '';
+  if (text) openPopup(text);
 }
-
-// Also close on scroll (tooltip position would be wrong)
-window.addEventListener('scroll', closeAllTips, { passive: true });
 
 /* ── Zodiac data ── */
 const ZODIACS = [
