@@ -184,6 +184,8 @@
 
   input[type="number"], input[type="date"], select {
     width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
     padding: .75rem 1rem;
     border-radius: 14px;
     border: 1.5px solid rgba(180,140,180,.25);
@@ -193,6 +195,38 @@
     color: var(--text);
     outline: none;
     transition: border-color .2s, box-shadow .2s;
+  }
+  /* iOS Safari date input fix */
+  .date-input-wrap {
+    width: 100%;
+    overflow: hidden;
+    border-radius: 14px;
+  }
+  input[type="date"] {
+    -webkit-appearance: none;
+    appearance: none;
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    padding: .75rem 1rem;
+    text-align: left;
+    /* Prevent iOS from expanding beyond container */
+    -webkit-writing-mode: horizontal-tb;
+  }
+  /* Clip the native iOS date widget if it overflows */
+  @supports (-webkit-touch-callout: none) {
+    .date-input-wrap {
+      position: relative;
+      overflow: hidden;
+    }
+    input[type="date"] {
+      position: relative;
+      left: 0;
+      right: 0;
+      width: 100% !important;
+    }
   }
   input:focus, select:focus {
     border-color: var(--accent);
@@ -560,7 +594,9 @@
           <div class="tooltip-box">Первый день последних месячных — это точка отсчёта для расчёта овуляции. В любом приложении для цикла (Flo, Clue и др.) это самая последняя красная отметка в календаре 📅</div>
         </span>
       </div>
-      <input type="date" id="lmp-date">
+      <div class="date-input-wrap">
+        <input type="date" id="lmp-date">
+      </div>
     </div>
     <div class="field-group">
       <div class="label-row">
