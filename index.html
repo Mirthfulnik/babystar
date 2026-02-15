@@ -421,6 +421,51 @@
   @media (max-width: 540px) {
     .tooltip-box { width: 200px; font-size: .75rem; }
   }
+
+  /* ── Regularity buttons ── */
+  .regularity-btns {
+    display: flex; gap: .6rem; flex-wrap: wrap;
+    margin-top: .1rem;
+  }
+  .reg-btn {
+    flex: 1; min-width: 110px;
+    display: flex; flex-direction: column; align-items: center; gap: .2rem;
+    padding: .65rem .5rem;
+    border-radius: 14px;
+    border: 2px solid rgba(180,140,180,.22);
+    background: rgba(255,255,255,0.6);
+    font-family: 'Nunito', sans-serif;
+    font-size: .8rem; font-weight: 600;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all .2s;
+  }
+  .reg-btn span {
+    font-size: .7rem; font-weight: 400; opacity: .8;
+  }
+  .reg-btn:hover {
+    background: var(--blush); border-color: var(--rose); color: var(--accent);
+    transform: translateY(-2px);
+  }
+  .reg-btn.active {
+    background: linear-gradient(135deg, var(--rose), var(--lavender));
+    border-color: var(--accent); color: var(--accent2);
+    box-shadow: 0 4px 14px rgba(180,100,140,.18);
+    transform: translateY(-2px);
+  }
+
+  /* ── Period item confidence badge ── */
+  .pi-confidence {
+    display: inline-block;
+    font-size: .72rem; font-weight: 700;
+    padding: .15rem .5rem;
+    border-radius: 20px;
+    margin-left: .4rem;
+    vertical-align: middle;
+  }
+  .conf-high   { background: rgba(160,220,180,.35); color: #3a8a5a; }
+  .conf-medium { background: rgba(253,233,177,.5);  color: #8a6a20; }
+  .conf-low    { background: rgba(244,194,208,.5);  color: #9a4060; }
 </style>
 </head>
 <body>
@@ -499,7 +544,7 @@
       </div>
       <input type="date" id="lmp-date">
     </div>
-    <div class="field-group" style="margin-bottom:0">
+    <div class="field-group">
       <div class="label-row">
         <label>🥚 Окно фертильности (±дней от овуляции)</label>
         <span class="tooltip-wrap">
@@ -510,6 +555,20 @@
       <div class="range-wrap">
         <input type="range" id="fertility-window" min="1" max="5" value="3" step="1">
         <span class="range-val" id="fertility-val">3</span>
+      </div>
+    </div>
+    <div class="field-group" style="margin-bottom:0">
+      <div class="label-row">
+        <label>📈 Регулярность цикла</label>
+        <span class="tooltip-wrap">
+          <button class="tooltip-btn" onclick="toggleTip(this)" type="button">?</button>
+          <div class="tooltip-box">Насколько стабилен ваш цикл? Если длина почти всегда одинакова — выберите «Очень регулярный». Если иногда колеблется на ±3–5 дней — «Умеренный». Если бывают сильные отклонения — «Нерегулярный». Это влияет на точность прогноза овуляции 📊</div>
+        </span>
+      </div>
+      <div class="regularity-btns" id="regularity-btns">
+        <button class="reg-btn active" data-jitter="1" onclick="selectReg(this)">🎯 Очень регулярный<span>±1 день</span></button>
+        <button class="reg-btn" data-jitter="3" onclick="selectReg(this)">〰️ Умеренный<span>±3 дня</span></button>
+        <button class="reg-btn" data-jitter="6" onclick="selectReg(this)">🌊 Нерегулярный<span>±6 дней</span></button>
       </div>
     </div>
   </div>
@@ -677,113 +736,163 @@ function getZodiac(date){
   return ZODIACS[0].name;
 }
 
-/* Compute ovulation days from LMP cycle info */
-function getOvulationDays(lmpDate, cycleLen, lutealDays, monthsAhead){
-  const days = [];
-  let cur = new Date(lmpDate);
-  for(let i=0;i<monthsAhead;i++){
-    const ov = addDays(cur, cycleLen - lutealDays);
-    days.push(ov);
-    cur = addDays(cur, cycleLen);
-  }
-  return days;
+/* ── Regularity selector ── */
+function selectReg(btn){
+  document.querySelectorAll('.reg-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
 }
 
-/* Gestational age at birth for a conception date (normally ~38 weeks from conception) */
-const GESTATION_DAYS = 266; // 38 weeks
+/*
+ * ── Core algorithm ──
+ *
+ * Goal: find which REAL ovulation cycles (derived from the user's LMP and
+ * cycle length) fall inside the back-calculated conception window for each
+ * chosen zodiac sign.
+ *
+ * Steps:
+ *  1. For each zodiac sign + target birth year, compute the birth date range
+ *     (sign boundaries ± tolerance).
+ *  2. Back-calculate the required CONCEPTION window:
+ *     conceptionDate = birthDate − GESTATION_DAYS (266 days / 38 weeks).
+ *  3. The user has a known LMP (last menstrual period). Ovulation in cycle N
+ *     occurs on:  LMP + N × cycleLen + (cycleLen − lutealDays)
+ *     We enumerate all N ≥ 0 whose ovulation date falls in the conception window.
+ *  4. For each matching ovulation we build a fertile window:
+ *     [ovulation − fertWindow − cycleJitter … ovulation + fertWindow + cycleJitter]
+ *     where cycleJitter reflects cycle regularity (the variability of when
+ *     ovulation actually occurs relative to the predicted day).
+ *  5. We report confidence: HIGH if jitter ≤ 1, MEDIUM if ≤ 3, LOW otherwise.
+ */
+const GESTATION_DAYS = 266; // 38 weeks from conception
+
+function getZodiacBirthWindow(zodiac, birthYear) {
+  const [sm, sd] = zodiac.start;
+  const [em, ed] = zodiac.end;
+  let birthStart, birthEnd;
+  if (sm <= em) {
+    birthStart = new Date(birthYear, sm - 1, sd);
+    birthEnd   = new Date(birthYear, em - 1, ed);
+  } else if (sm >= 10) {
+    // sign starts in prev year (Capricorn: Dec 22 – Jan 19)
+    birthStart = new Date(birthYear - 1, sm - 1, sd);
+    birthEnd   = new Date(birthYear,     em - 1, ed);
+  } else {
+    birthStart = new Date(birthYear,     sm - 1, sd);
+    birthEnd   = new Date(birthYear + 1, em - 1, ed);
+  }
+  return { birthStart, birthEnd };
+}
+
+function findMatchingOvulations(lmpDate, cycleLen, lutealDays, concStart, concEnd) {
+  // Ovulation in cycle N (0-based) = LMP + N*cycleLen + (cycleLen - lutealDays)
+  const ovDayInCycle = cycleLen - lutealDays; // day of ovulation within a cycle
+  const windows = [];
+
+  // Calculate cycle index range that could possibly overlap concStart..concEnd
+  const daysToStart = Math.floor((concStart - lmpDate) / 86400000);
+  const daysToEnd   = Math.ceil((concEnd   - lmpDate) / 86400000);
+
+  const nMin = Math.max(0, Math.floor((daysToStart - ovDayInCycle) / cycleLen));
+  const nMax = Math.ceil((daysToEnd   - ovDayInCycle) / cycleLen) + 1;
+
+  for (let n = nMin; n <= nMax; n++) {
+    const ovDate = addDays(lmpDate, n * cycleLen + ovDayInCycle);
+    if (ovDate >= concStart && ovDate <= concEnd) {
+      windows.push({ ovDate, cycleNum: n });
+    }
+  }
+  return windows;
+}
 
 /* ── Main calculation ── */
 function calculate(){
   const selected = [...document.querySelectorAll('.zodiac-btn.active')].map(b=>ZODIACS[+b.dataset.idx]);
   if(!selected.length){ alert('Пожалуйста, выберите хотя бы один знак зодиака ⭐'); return; }
 
-  const cycleLen      = +document.getElementById('cycle-len').value;
-  const lutealDays    = +document.getElementById('luteal').value;
-  const lmpVal        = document.getElementById('lmp-date').value;
-  const fertWindow    = +document.getElementById('fertility-window').value;
-  const birthYear     = +document.getElementById('birth-year').value;
-  const tolWeeks      = +document.getElementById('tolerance').value;
+  const cycleLen   = +document.getElementById('cycle-len').value;
+  const lutealDays = +document.getElementById('luteal').value;
+  const lmpVal     = document.getElementById('lmp-date').value;
+  const fertWindow = +document.getElementById('fertility-window').value;
+  const birthYear  = +document.getElementById('birth-year').value;
+  const tolWeeks   = +document.getElementById('tolerance').value;
+  const jitter     = +document.querySelector('.reg-btn.active').dataset.jitter;
 
   if(!lmpVal){ alert('Укажи первый день последней менструации 📅'); return; }
 
   const lmpDate = new Date(lmpVal);
   const tolDays = tolWeeks * 7;
 
-  /* Generate ovulation days for 24 months ahead */
-  const ovDays = getOvulationDays(lmpDate, cycleLen, lutealDays, 30);
+  // Confidence label based on jitter
+  const confLabel = jitter <= 1 ? ['high',   '🟢 Высокая точность']
+                  : jitter <= 3 ? ['medium', '🟡 Средняя точность']
+                                : ['low',    '🔴 Приблизительно'];
 
   const results = [];
 
-  for(const zodiac of selected){
-    /* Zodiac birth window in target year (and adjacent years for edge signs) */
-    const [sm,sd]=zodiac.start, [em,ed]=zodiac.end;
+  for (const zodiac of selected) {
+    const { birthStart: bs, birthEnd: be } = getZodiacBirthWindow(zodiac, birthYear);
 
-    let birthStart, birthEnd;
-    if(sm<=em){
-      birthStart = new Date(birthYear, sm-1, sd);
-      birthEnd   = new Date(birthYear, em-1, ed);
-    } else {
-      // crosses year boundary
-      if(sm>=10){
-        birthStart = new Date(birthYear-1, sm-1, sd);
-        birthEnd   = new Date(birthYear,   em-1, ed);
-      } else {
-        birthStart = new Date(birthYear, sm-1, sd);
-        birthEnd   = new Date(birthYear+1, em-1, ed);
-      }
-    }
+    // Expand by tolerance
+    const birthStart = addDays(bs, -tolDays);
+    const birthEnd   = addDays(be,  tolDays);
 
-    /* Expand by tolerance */
-    birthStart = addDays(birthStart, -tolDays);
-    birthEnd   = addDays(birthEnd,    tolDays);
-
-    /* Back-calculate conception window */
+    // Back-calculate conception window
     const concStart = addDays(birthStart, -GESTATION_DAYS);
     const concEnd   = addDays(birthEnd,   -GESTATION_DAYS);
 
-    /* Find ovulation days within conception window */
-    const matchingOv = ovDays.filter(ov => ov >= concStart && ov <= concEnd);
+    // Find real ovulation cycles that land in this window
+    const ovMatches = findMatchingOvulations(lmpDate, cycleLen, lutealDays, concStart, concEnd);
 
-    /* Build fertile windows around each ovulation */
-    const windows = matchingOv.map(ov=>{
+    // Build fertile windows (fertility days ± jitter for cycle variability)
+    const windows = ovMatches.map(({ ovDate }) => {
+      const totalSpread = fertWindow + jitter;
       return {
-        fertFrom: addDays(ov, -fertWindow),
-        fertTo:   addDays(ov, fertWindow),
-        ovDate:   ov,
-        predictedBirth: addDays(ov, GESTATION_DAYS),
+        fertFrom:       addDays(ovDate, -totalSpread),
+        fertTo:         addDays(ovDate,  totalSpread),
+        ovDate,
+        predictedBirth: addDays(ovDate, GESTATION_DAYS),
       };
     });
 
-    /* Also include general conception window even without ovulation match */
-    results.push({ zodiac, concStart, concEnd, windows, birthStart: addDays(birthStart,tolDays), birthEnd: addDays(birthEnd,-tolDays) });
+    results.push({ zodiac, windows, birthStart: bs, birthEnd: be, concStart, concEnd });
   }
 
-  /* Render */
+  /* ── Render ── */
   const list = document.getElementById('result-list');
   list.innerHTML = '';
-
   let plainText = '✨ Окна зачатия — Baby Star\n\n';
 
-  results.forEach(r=>{
-    const { zodiac, concStart, concEnd, windows, birthStart, birthEnd } = r;
-
+  results.forEach(r => {
+    const { zodiac, windows, birthStart, birthEnd } = r;
     const li = document.createElement('li');
     li.className = 'period-item';
 
-    let html = `<div class="pi-head">${zodiac.emoji} ${zodiac.name}</div>`;
+    let html = `<div class="pi-head">${zodiac.emoji} ${zodiac.name}
+      <span class="pi-confidence conf-${confLabel[0]}">${confLabel[1]}</span>
+    </div>`;
 
-    if(windows.length){
-      html += `<div class="pi-body">🥚 Окна зачатия с учётом овуляции:</div>`;
-      windows.forEach(w=>{
+    if (windows.length) {
+      html += `<div class="pi-body" style="margin-bottom:.4rem">🥚 Рекомендуемые дни зачатия:</div>`;
+      windows.forEach(w => {
         html += `<div class="pi-dates">📅 ${fmtDate(w.fertFrom)} — ${fmtDate(w.fertTo)}</div>`;
-        html += `<div class="pi-body">  овуляция: ${fmtShort(w.ovDate)} · предполагаемые роды: ${fmtDate(w.predictedBirth)}</div>`;
-        plainText += `${zodiac.emoji} ${zodiac.name}\nОкно: ${fmtDate(w.fertFrom)} — ${fmtDate(w.fertTo)}\nОвуляция: ${fmtShort(w.ovDate)}, роды ≈ ${fmtDate(w.predictedBirth)}\n\n`;
+        html += `<div class="pi-body">овуляция: <b>${fmtShort(w.ovDate)}</b> · роды ≈ <b>${fmtDate(w.predictedBirth)}</b></div>`;
+        plainText += `${zodiac.emoji} ${zodiac.name}\n`;
+        plainText += `Дни зачатия: ${fmtDate(w.fertFrom)} — ${fmtDate(w.fertTo)}\n`;
+        plainText += `Овуляция: ${fmtShort(w.ovDate)} · Роды ≈ ${fmtDate(w.predictedBirth)}\n\n`;
       });
+      html += `<div class="pi-body" style="margin-top:.4rem">🎂 Знак зодиака: ${zodiac.emoji} ${zodiac.name} (${fmtShort(birthStart)} — ${fmtShort(birthEnd)})</div>`;
     } else {
-      html += `<div class="pi-body">Общее окно зачатия (без попадания в овуляцию):</div>`;
-      html += `<div class="pi-dates">📅 ${fmtDate(concStart)} — ${fmtDate(concEnd)}</div>`;
-      html += `<div class="pi-body">Роды ожидаются: ${fmtDate(birthStart)} — ${fmtDate(birthEnd)}</div>`;
-      plainText += `${zodiac.emoji} ${zodiac.name}\nОбщее окно: ${fmtDate(concStart)} — ${fmtDate(concEnd)}\nРоды: ${fmtDate(birthStart)} — ${fmtDate(birthEnd)}\n\n`;
+      // No cycles aligned — show the nearest ovulation to the window and explain
+      const midConc = new Date((r.concStart.getTime() + r.concEnd.getTime()) / 2);
+      const ovDayInCycle = cycleLen - lutealDays;
+      const daysToMid = (midConc - lmpDate) / 86400000;
+      const nearestN  = Math.round((daysToMid - ovDayInCycle) / cycleLen);
+      const nearestOv = addDays(lmpDate, Math.max(0, nearestN) * cycleLen + ovDayInCycle);
+      const totalSpread = fertWindow + jitter;
+      html += `<div class="pi-body">Ни одна прогнозируемая овуляция не попала точно в окно для этого знака.</div>`;
+      html += `<div class="pi-body" style="margin-top:.4rem">🔍 Ближайшая овуляция: <b>${fmtDate(nearestOv)}</b></div>`;
+      html += `<div class="pi-body">Попробуйте увеличить допустимое отклонение или выбрать соседний знак 🌸</div>`;
+      plainText += `${zodiac.emoji} ${zodiac.name}: нет совпадений с циклом. Ближайшая овуляция: ${fmtDate(nearestOv)}\n\n`;
     }
 
     li.innerHTML = html;
@@ -792,12 +901,12 @@ function calculate(){
 
   /* Ovulation note */
   const ovNote = document.getElementById('ovulation-note');
-  ovNote.innerHTML = `🌿 <span>Расчёт учитывает цикл <b>${cycleLen} дн.</b>, лютеиновую фазу <b>${lutealDays} дн.</b>, окно фертильности <b>±${fertWindow} дн.</b> от овуляции. Беременность считается как 266 дней от зачатия.</span>`;
+  const regNames = ['очень регулярный','умеренный','нерегулярный'];
+  const regIdx   = [1,3,6].indexOf(+document.querySelector('.reg-btn.active').dataset.jitter);
+  ovNote.innerHTML = `🌿 <span>Цикл <b>${cycleLen} дн.</b>, лютеиновая фаза <b>${lutealDays} дн.</b>, окно фертильности <b>±${fertWindow} дн.</b>, цикл <b>${regNames[regIdx] || 'умеренный'}</b> (±${jitter} дн. разброс). Беременность = 266 дней от зачатия.</span>`;
 
-  /* Store for copy */
   document.getElementById('copy-area').textContent = plainText;
 
-  /* Show result */
   const rc = document.getElementById('result-card');
   rc.classList.add('visible');
   setTimeout(()=>rc.scrollIntoView({behavior:'smooth',block:'start'}), 100);
