@@ -737,7 +737,7 @@ function calculate(){
   const list = document.getElementById('result-list');
   list.innerHTML = '';
 
-  let plainText = '✨ Окна зачатия — ЗвёздоЧадо\n\n';
+  let plainText = '✨ Окна зачатия — Baby Star\n\n';
 
   results.forEach(r=>{
     const { zodiac, concStart, concEnd, windows, birthStart, birthEnd } = r;
@@ -795,7 +795,7 @@ function printResult(){ window.print(); }
 function shareResult(){
   const txt = document.getElementById('copy-area').textContent;
   if(navigator.share){
-    navigator.share({ title:'✨ Окна зачатия — ЗвёздоЧадо', text: txt });
+    navigator.share({ title:'✨ Окна зачатия — Baby Star', text: txt });
   } else {
     const mailto = 'mailto:?subject=✨ Наши окна зачатия&body='+encodeURIComponent(txt);
     window.open(mailto);
