@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>✨ ЗвёздоЧадо — Зачатие под знаком звёзд</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Nunito:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --rose:    #f4c2d0;
+    --blush:   #fde8ef;
+    --lavender:#e8d5f0;
+    --mint:    #d0ede8;
+    --peach:   #fde9d9;
+    --sky:     #d5eaf7;
+    --cream:   #fff8f2;
+    --text:    #5a4155;
+    --muted:   #a08aa8;
+    --accent:  #c97fa0;
+    --accent2: #9b6baf;
+    --white:   #ffffff;
+    --shadow:  rgba(180,130,160,0.15);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Nunito', sans-serif;
+    background: var(--cream);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── Background blobs ── */
+  .bg-blobs {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden;
+  }
+  .blob {
+    position: absolute; border-radius: 50%; filter: blur(80px); opacity: 0.45;
+    animation: floatBlob 18s ease-in-out infinite alternate;
+  }
+  .blob1 { width: 520px; height: 520px; background: var(--rose);    top: -120px; left: -100px; animation-duration: 20s; }
+  .blob2 { width: 400px; height: 400px; background: var(--lavender); top: 30%;  right: -80px; animation-duration: 24s; }
+  .blob3 { width: 350px; height: 350px; background: var(--peach);    bottom: 5%; left: 20%;   animation-duration: 17s; }
+  .blob4 { width: 280px; height: 280px; background: var(--mint);     bottom: 20%; right: 10%; animation-duration: 22s; }
+
+  @keyframes floatBlob {
+    from { transform: translate(0,0) scale(1); }
+    to   { transform: translate(30px,40px) scale(1.08); }
+  }
+
+  /* ── Wrapper ── */
+  .wrapper {
+    position: relative; z-index: 1;
+    max-width: 760px; margin: 0 auto;
+    padding: 2rem 1.25rem 5rem;
+  }
+
+  /* ── Header ── */
+  header {
+    text-align: center;
+    padding: 3rem 0 2.5rem;
+    animation: fadeDown .8s ease both;
+  }
+  .logo-icon { font-size: 3.2rem; display: block; margin-bottom: .5rem; animation: pulse 3s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.08)} }
+  header h1 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(2rem, 6vw, 3rem);
+    font-weight: 600;
+    color: var(--accent2);
+    line-height: 1.15;
+    letter-spacing: .01em;
+  }
+  header p {
+    margin-top: .75rem;
+    color: var(--muted);
+    font-size: 1rem;
+    font-weight: 300;
+    max-width: 480px;
+    margin-left: auto; margin-right: auto;
+  }
+
+  /* ── Card ── */
+  .card {
+    background: rgba(255,255,255,0.72);
+    backdrop-filter: blur(18px);
+    border: 1.5px solid rgba(255,255,255,0.85);
+    border-radius: 28px;
+    padding: 2rem 1.75rem;
+    margin-bottom: 1.25rem;
+    box-shadow: 0 8px 32px var(--shadow);
+    animation: fadeUp .7s ease both;
+  }
+  .card:nth-child(2) { animation-delay: .1s; }
+  .card:nth-child(3) { animation-delay: .2s; }
+  .card:nth-child(4) { animation-delay: .3s; }
+
+  @keyframes fadeDown { from{opacity:0;transform:translateY(-22px)} to{opacity:1;transform:none} }
+  @keyframes fadeUp   { from{opacity:0;transform:translateY(22px)}  to{opacity:1;transform:none} }
+
+  .card-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.45rem;
+    font-weight: 600;
+    color: var(--accent2);
+    margin-bottom: 1.1rem;
+    display: flex; align-items: center; gap: .5rem;
+  }
+
+  /* ── Zodiac grid ── */
+  .zodiac-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+    gap: .65rem;
+  }
+  .zodiac-btn {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: .25rem;
+    padding: .75rem .4rem;
+    border-radius: 18px;
+    border: 2px solid transparent;
+    background: rgba(255,255,255,0.6);
+    cursor: pointer;
+    transition: all .22s ease;
+    font-family: 'Nunito', sans-serif;
+    font-size: .75rem;
+    font-weight: 500;
+    color: var(--muted);
+    user-select: none;
+  }
+  .zodiac-btn .z-emoji { font-size: 1.6rem; transition: transform .22s; }
+  .zodiac-btn:hover { background: var(--blush); border-color: var(--rose); color: var(--accent); transform: translateY(-2px); }
+  .zodiac-btn:hover .z-emoji { transform: scale(1.15); }
+  .zodiac-btn.active {
+    background: linear-gradient(135deg, var(--rose), var(--lavender));
+    border-color: var(--accent);
+    color: var(--accent2);
+    font-weight: 600;
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(180,100,140,.2);
+  }
+  .zodiac-btn.active .z-emoji { transform: scale(1.2); }
+
+  /* ── Form fields ── */
+  label {
+    display: block;
+    font-size: .87rem;
+    font-weight: 600;
+    color: var(--muted);
+    margin-bottom: .45rem;
+    letter-spacing: .03em;
+  }
+  .field-group { margin-bottom: 1.25rem; }
+  .field-group:last-child { margin-bottom: 0; }
+
+  input[type="number"], input[type="date"], select {
+    width: 100%;
+    padding: .75rem 1rem;
+    border-radius: 14px;
+    border: 1.5px solid rgba(180,140,180,.25);
+    background: rgba(255,255,255,0.75);
+    font-family: 'Nunito', sans-serif;
+    font-size: .95rem;
+    color: var(--text);
+    outline: none;
+    transition: border-color .2s, box-shadow .2s;
+  }
+  input:focus, select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(201,127,160,.15);
+  }
+
+  .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  @media (max-width: 480px) { .row-2 { grid-template-columns: 1fr; } }
+
+  .hint {
+    font-size: .8rem;
+    color: var(--muted);
+    margin-top: .4rem;
+    line-height: 1.45;
+  }
+
+  /* ── Slider ── */
+  .range-wrap { display: flex; align-items: center; gap: .75rem; }
+  input[type="range"] {
+    flex: 1; -webkit-appearance: none;
+    height: 5px; border-radius: 10px;
+    background: linear-gradient(to right, var(--accent) 0%, var(--accent) var(--val,50%), rgba(180,140,180,.2) var(--val,50%), rgba(180,140,180,.2) 100%);
+    outline: none; border: none; cursor: pointer;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 20px; height: 20px;
+    border-radius: 50%; background: var(--white);
+    border: 2.5px solid var(--accent);
+    box-shadow: 0 2px 8px rgba(180,100,140,.25);
+    transition: transform .15s;
+  }
+  input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+  .range-val {
+    font-weight: 700; color: var(--accent2); font-size: 1rem; min-width: 2.5rem; text-align: center;
+  }
+
+  /* ── Button ── */
+  .btn-calc {
+    display: block; width: 100%;
+    padding: 1rem;
+    border-radius: 18px;
+    border: none;
+    background: linear-gradient(135deg, #e8a0be, #b57bbf);
+    color: var(--white);
+    font-family: 'Nunito', sans-serif;
+    font-size: 1.05rem; font-weight: 700;
+    letter-spacing: .04em;
+    cursor: pointer;
+    box-shadow: 0 8px 24px rgba(180,100,160,.3);
+    transition: transform .2s, box-shadow .2s;
+    margin-top: .5rem;
+  }
+  .btn-calc:hover { transform: translateY(-3px); box-shadow: 0 14px 32px rgba(180,100,160,.4); }
+  .btn-calc:active { transform: translateY(0); }
+
+  /* ── Result card ── */
+  #result-card {
+    display: none;
+    animation: fadeUp .6s ease both;
+  }
+  #result-card.visible { display: block; }
+
+  .result-header {
+    display: flex; align-items: center; gap: .75rem;
+    margin-bottom: 1.25rem;
+  }
+  .result-header .big-emoji { font-size: 2.2rem; }
+  .result-header h2 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.6rem; font-weight: 600; color: var(--accent2);
+  }
+
+  .period-list { list-style: none; }
+  .period-item {
+    background: linear-gradient(135deg, rgba(244,194,208,.3), rgba(232,213,240,.3));
+    border-radius: 16px;
+    padding: 1rem 1.25rem;
+    margin-bottom: .75rem;
+    border-left: 4px solid var(--accent);
+    transition: transform .2s;
+  }
+  .period-item:hover { transform: translateX(4px); }
+  .period-item .pi-head {
+    display: flex; align-items: center; gap: .5rem;
+    font-weight: 700; color: var(--accent2); font-size: 1rem; margin-bottom: .3rem;
+  }
+  .period-item .pi-body { font-size: .88rem; color: var(--muted); line-height: 1.6; }
+  .period-item .pi-dates { font-size: .95rem; color: var(--text); font-weight: 600; margin-top: .3rem; }
+
+  .ovulation-note {
+    background: rgba(208,237,232,.4);
+    border-radius: 14px;
+    padding: .85rem 1rem;
+    font-size: .85rem;
+    color: #5a8a84;
+    margin-top: 1rem;
+    display: flex; align-items: flex-start; gap: .5rem;
+  }
+
+  /* ── Action buttons ── */
+  .action-row {
+    display: flex; flex-wrap: wrap; gap: .65rem;
+    margin-top: 1.25rem;
+  }
+  .btn-action {
+    flex: 1; min-width: 130px;
+    padding: .7rem .9rem;
+    border-radius: 14px;
+    border: 2px solid;
+    font-family: 'Nunito', sans-serif;
+    font-size: .88rem; font-weight: 700;
+    cursor: pointer;
+    transition: all .2s;
+    display: flex; align-items: center; justify-content: center; gap: .4rem;
+  }
+  .btn-copy   { background: rgba(244,194,208,.3); border-color: var(--rose);    color: var(--accent); }
+  .btn-print  { background: rgba(232,213,240,.3); border-color: var(--lavender);color: var(--accent2);}
+  .btn-share  { background: rgba(213,234,247,.3); border-color: var(--sky);     color: #5588aa; }
+  .btn-action:hover { transform: translateY(-2px); box-shadow: 0 6px 16px var(--shadow); }
+  .btn-action:active { transform: none; }
+
+  .copy-toast {
+    display: none; text-align: center; margin-top: .75rem;
+    font-size: .85rem; color: var(--accent2); font-weight: 600;
+    animation: fadeUp .4s ease;
+  }
+  .copy-toast.show { display: block; }
+
+  /* ── Support block ── */
+  .support-card {
+    text-align: center;
+    background: linear-gradient(135deg, rgba(244,194,208,.35), rgba(232,213,240,.35));
+    border: 1.5px solid rgba(255,255,255,.9);
+  }
+  .support-card .support-emoji { font-size: 2rem; display: block; margin-bottom: .5rem; }
+  .support-card p { color: var(--muted); font-size: .95rem; margin-bottom: 1rem; }
+  .btn-support {
+    display: inline-block;
+    padding: .7rem 2rem;
+    border-radius: 14px;
+    border: none;
+    background: linear-gradient(135deg, #f4c2d0, #c97fa0);
+    color: var(--white);
+    font-family: 'Nunito', sans-serif;
+    font-size: .95rem; font-weight: 700;
+    text-decoration: none;
+    box-shadow: 0 6px 20px rgba(180,100,140,.25);
+    transition: transform .2s, box-shadow .2s;
+  }
+  .btn-support:hover { transform: translateY(-3px); box-shadow: 0 12px 28px rgba(180,100,140,.35); }
+
+  /* ── Footer ── */
+  footer {
+    text-align: center; color: var(--muted); font-size: .78rem;
+    padding: 2rem 0 1rem;
+    line-height: 1.7;
+  }
+
+  /* ── Print styles ── */
+  @media print {
+    .bg-blobs, header .logo-icon, .action-row, .support-card, footer { display: none !important; }
+    .card { box-shadow: none; border: 1px solid #eee; break-inside: avoid; }
+    body { background: white; }
+  }
+
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--rose); border-radius: 10px; }
+</style>
+</head>
+<body>
+
+<div class="bg-blobs">
+  <div class="blob blob1"></div>
+  <div class="blob blob2"></div>
+  <div class="blob blob3"></div>
+  <div class="blob blob4"></div>
+</div>
+
+<div class="wrapper">
+
+  <!-- Header -->
+  <header>
+    <span class="logo-icon">🌸✨</span>
+    <h1>ЗвёздоЧадо</h1>
+    <p>Узнай, когда зачать малыша, чтобы он родился под нужным знаком зодиака ✨</p>
+  </header>
+
+  <!-- Step 1 — Zodiac -->
+  <div class="card" id="card-zodiac">
+    <div class="card-title">⭐ Желаемый знак зодиака</div>
+    <div class="zodiac-grid" id="zodiac-grid">
+      <!-- JS renders buttons -->
+    </div>
+    <p class="hint" style="margin-top:.9rem">Можно выбрать несколько знаков 💫</p>
+  </div>
+
+  <!-- Step 2 — Cycle -->
+  <div class="card" id="card-cycle">
+    <div class="card-title">🌙 Менструальный цикл</div>
+    <div class="row-2">
+      <div class="field-group">
+        <label>Длина цикла (дней)</label>
+        <div class="range-wrap">
+          <input type="range" id="cycle-len" min="21" max="40" value="28" step="1">
+          <span class="range-val" id="cycle-len-val">28</span>
+        </div>
+        <p class="hint">Среднее: 28 дней</p>
+      </div>
+      <div class="field-group">
+        <label>Длина лютеиновой фазы (дней)</label>
+        <div class="range-wrap">
+          <input type="range" id="luteal" min="10" max="16" value="14" step="1">
+          <span class="range-val" id="luteal-val">14</span>
+        </div>
+        <p class="hint">Обычно 12–16 дней</p>
+      </div>
+    </div>
+    <div class="field-group">
+      <label>📅 Первый день последней менструации</label>
+      <input type="date" id="lmp-date">
+    </div>
+    <div class="field-group" style="margin-bottom:0">
+      <label>🥚 Окно фертильности (±дней от овуляции)</label>
+      <div class="range-wrap">
+        <input type="range" id="fertility-window" min="1" max="5" value="3" step="1">
+        <span class="range-val" id="fertility-val">3</span>
+      </div>
+      <p class="hint">Сперматозоиды живут до 5 дней, яйцеклетка — до 24 ч. Окно ±3 дня — хороший баланс 🌸</p>
+    </div>
+  </div>
+
+  <!-- Step 3 — Year -->
+  <div class="card" id="card-year">
+    <div class="card-title">🗓️ Год планируемых родов</div>
+    <div class="row-2">
+      <div class="field-group">
+        <label>Год рождения малыша</label>
+        <select id="birth-year">
+        </select>
+      </div>
+      <div class="field-group">
+        <label>Допустимое отклонение (нед.)</label>
+        <div class="range-wrap">
+          <input type="range" id="tolerance" min="0" max="4" value="2" step="1">
+          <span class="range-val" id="tolerance-val">2</span>
+        </div>
+        <p class="hint">Недели раньше/позже нормы</p>
+      </div>
+    </div>
+
+    <button class="btn-calc" id="btn-calc" onclick="calculate()">
+      ✨ Рассчитать магические окна
+    </button>
+  </div>
+
+  <!-- Result -->
+  <div class="card" id="result-card">
+    <div class="result-header">
+      <span class="big-emoji">🌟</span>
+      <h2>Ваши окна зачатия</h2>
+    </div>
+    <ul class="period-list" id="result-list"></ul>
+    <div class="ovulation-note" id="ovulation-note"></div>
+    <div id="copy-area" style="display:none"></div>
+    <div class="action-row">
+      <button class="btn-action btn-copy"  onclick="copyResult()">📋 Скопировать</button>
+      <button class="btn-action btn-print" onclick="printResult()">🖨️ PDF / Печать</button>
+      <button class="btn-action btn-share" onclick="shareResult()">💌 Отправить</button>
+    </div>
+    <div class="copy-toast" id="copy-toast">✅ Скопировано в буфер!</div>
+  </div>
+
+  <!-- Support -->
+  <div class="card support-card">
+    <span class="support-emoji">☕</span>
+    <p><strong>Понравилось приложение?</strong><br>Вы можете поддержать нас, а мы купим себе кофе ☕😊</p>
+    <a class="btn-support" href="#" target="_blank" rel="noopener">💝 Поддержать</a>
+  </div>
+
+  <footer>
+    🌸 ЗвёздоЧадо · Расчёт носит информационный характер<br>
+    Для медицинских консультаций обратитесь к врачу 💗
+  </footer>
+
+</div>
+
+<script>
+/* ── Zodiac data ── */
+const ZODIACS = [
+  { name:'Овен',      emoji:'♈', symbol:'Aries',       start:[3,21], end:[4,19] },
+  { name:'Телец',     emoji:'♉', symbol:'Taurus',      start:[4,20], end:[5,20] },
+  { name:'Близнецы',  emoji:'♊', symbol:'Gemini',      start:[5,21], end:[6,20] },
+  { name:'Рак',       emoji:'♋', symbol:'Cancer',      start:[6,21], end:[7,22] },
+  { name:'Лев',       emoji:'♌', symbol:'Leo',         start:[7,23], end:[8,22] },
+  { name:'Дева',      emoji:'♍', symbol:'Virgo',       start:[8,23], end:[9,22] },
+  { name:'Весы',      emoji:'♎', symbol:'Libra',       start:[9,23], end:[10,22] },
+  { name:'Скорпион',  emoji:'♏', symbol:'Scorpio',     start:[10,23],end:[11,21] },
+  { name:'Стрелец',   emoji:'♐', symbol:'Sagittarius', start:[11,22],end:[12,21] },
+  { name:'Козерог',   emoji:'♑', symbol:'Capricorn',   start:[12,22],end:[1,19] },
+  { name:'Водолей',   emoji:'♒', symbol:'Aquarius',    start:[1,20], end:[2,18] },
+  { name:'Рыбы',      emoji:'♓', symbol:'Pisces',      start:[2,19], end:[3,20] },
+];
+
+/* ── Zodiac grid ── */
+const grid = document.getElementById('zodiac-grid');
+ZODIACS.forEach((z,i)=>{
+  const btn = document.createElement('button');
+  btn.className = 'zodiac-btn';
+  btn.dataset.idx = i;
+  btn.innerHTML = `<span class="z-emoji">${z.emoji}</span><span>${z.name}</span>`;
+  btn.onclick = () => { btn.classList.toggle('active'); };
+  grid.appendChild(btn);
+});
+
+/* ── Sliders ── */
+function bindSlider(id, valId){
+  const el = document.getElementById(id);
+  const vl = document.getElementById(valId);
+  const update = ()=>{
+    vl.textContent = el.value;
+    const pct = ((el.value-el.min)/(el.max-el.min)*100).toFixed(1)+'%';
+    el.style.setProperty('--val',pct);
+  };
+  el.addEventListener('input', update);
+  update();
+}
+bindSlider('cycle-len','cycle-len-val');
+bindSlider('luteal','luteal-val');
+bindSlider('fertility-window','fertility-val');
+bindSlider('tolerance','tolerance-val');
+
+/* ── Populate birth year ── */
+(()=>{
+  const sel = document.getElementById('birth-year');
+  const curYear = new Date().getFullYear();
+  for(let y = 2025; y <= 2050; y++){
+    const opt = document.createElement('option');
+    opt.value = y;
+    opt.textContent = y;
+    if(y === Math.max(curYear, 2026)) opt.selected = true;
+    sel.appendChild(opt);
+  }
+})();
+
+/* ── Set default LMP date = today ── */
+const today = new Date();
+document.getElementById('lmp-date').value = today.toISOString().split('T')[0];
+
+/* ── Helpers ── */
+const addDays = (d,n)=>{ const r=new Date(d); r.setDate(r.getDate()+n); return r; };
+const fmtDate = d => d.toLocaleDateString('ru-RU',{day:'2-digit',month:'long',year:'numeric'});
+const fmtShort= d => d.toLocaleDateString('ru-RU',{day:'2-digit',month:'short'});
+
+/* Get zodiac for a date in given year */
+function getZodiac(date){
+  const m=date.getMonth()+1, d=date.getDate();
+  for(const z of ZODIACS){
+    const [sm,sd]=z.start, [em,ed]=z.end;
+    if(sm>em){ // crosses year boundary (Козерог/Рыбы edge)
+      if((m===sm&&d>=sd)||(m>sm)||(m<em)||(m===em&&d<=ed)) return z.name;
+    } else {
+      if((m===sm&&d>=sd)||((m>sm&&m<em))||(m===em&&d<=ed)) return z.name;
+    }
+  }
+  return ZODIACS[0].name;
+}
+
+/* Compute ovulation days from LMP cycle info */
+function getOvulationDays(lmpDate, cycleLen, lutealDays, monthsAhead){
+  const days = [];
+  let cur = new Date(lmpDate);
+  for(let i=0;i<monthsAhead;i++){
+    const ov = addDays(cur, cycleLen - lutealDays);
+    days.push(ov);
+    cur = addDays(cur, cycleLen);
+  }
+  return days;
+}
+
+/* Gestational age at birth for a conception date (normally ~38 weeks from conception) */
+const GESTATION_DAYS = 266; // 38 weeks
+
+/* ── Main calculation ── */
+function calculate(){
+  const selected = [...document.querySelectorAll('.zodiac-btn.active')].map(b=>ZODIACS[+b.dataset.idx]);
+  if(!selected.length){ alert('Пожалуйста, выберите хотя бы один знак зодиака ⭐'); return; }
+
+  const cycleLen      = +document.getElementById('cycle-len').value;
+  const lutealDays    = +document.getElementById('luteal').value;
+  const lmpVal        = document.getElementById('lmp-date').value;
+  const fertWindow    = +document.getElementById('fertility-window').value;
+  const birthYear     = +document.getElementById('birth-year').value;
+  const tolWeeks      = +document.getElementById('tolerance').value;
+
+  if(!lmpVal){ alert('Укажи первый день последней менструации 📅'); return; }
+
+  const lmpDate = new Date(lmpVal);
+  const tolDays = tolWeeks * 7;
+
+  /* Generate ovulation days for 24 months ahead */
+  const ovDays = getOvulationDays(lmpDate, cycleLen, lutealDays, 30);
+
+  const results = [];
+
+  for(const zodiac of selected){
+    /* Zodiac birth window in target year (and adjacent years for edge signs) */
+    const [sm,sd]=zodiac.start, [em,ed]=zodiac.end;
+
+    let birthStart, birthEnd;
+    if(sm<=em){
+      birthStart = new Date(birthYear, sm-1, sd);
+      birthEnd   = new Date(birthYear, em-1, ed);
+    } else {
+      // crosses year boundary
+      if(sm>=10){
+        birthStart = new Date(birthYear-1, sm-1, sd);
+        birthEnd   = new Date(birthYear,   em-1, ed);
+      } else {
+        birthStart = new Date(birthYear, sm-1, sd);
+        birthEnd   = new Date(birthYear+1, em-1, ed);
+      }
+    }
+
+    /* Expand by tolerance */
+    birthStart = addDays(birthStart, -tolDays);
+    birthEnd   = addDays(birthEnd,    tolDays);
+
+    /* Back-calculate conception window */
+    const concStart = addDays(birthStart, -GESTATION_DAYS);
+    const concEnd   = addDays(birthEnd,   -GESTATION_DAYS);
+
+    /* Find ovulation days within conception window */
+    const matchingOv = ovDays.filter(ov => ov >= concStart && ov <= concEnd);
+
+    /* Build fertile windows around each ovulation */
+    const windows = matchingOv.map(ov=>{
+      return {
+        fertFrom: addDays(ov, -fertWindow),
+        fertTo:   addDays(ov, fertWindow),
+        ovDate:   ov,
+        predictedBirth: addDays(ov, GESTATION_DAYS),
+      };
+    });
+
+    /* Also include general conception window even without ovulation match */
+    results.push({ zodiac, concStart, concEnd, windows, birthStart: addDays(birthStart,tolDays), birthEnd: addDays(birthEnd,-tolDays) });
+  }
+
+  /* Render */
+  const list = document.getElementById('result-list');
+  list.innerHTML = '';
+
+  let plainText = '✨ Окна зачатия — ЗвёздоЧадо\n\n';
+
+  results.forEach(r=>{
+    const { zodiac, concStart, concEnd, windows, birthStart, birthEnd } = r;
+
+    const li = document.createElement('li');
+    li.className = 'period-item';
+
+    let html = `<div class="pi-head">${zodiac.emoji} ${zodiac.name}</div>`;
+
+    if(windows.length){
+      html += `<div class="pi-body">🥚 Окна зачатия с учётом овуляции:</div>`;
+      windows.forEach(w=>{
+        html += `<div class="pi-dates">📅 ${fmtDate(w.fertFrom)} — ${fmtDate(w.fertTo)}</div>`;
+        html += `<div class="pi-body">  овуляция: ${fmtShort(w.ovDate)} · предполагаемые роды: ${fmtDate(w.predictedBirth)}</div>`;
+        plainText += `${zodiac.emoji} ${zodiac.name}\nОкно: ${fmtDate(w.fertFrom)} — ${fmtDate(w.fertTo)}\nОвуляция: ${fmtShort(w.ovDate)}, роды ≈ ${fmtDate(w.predictedBirth)}\n\n`;
+      });
+    } else {
+      html += `<div class="pi-body">Общее окно зачатия (без попадания в овуляцию):</div>`;
+      html += `<div class="pi-dates">📅 ${fmtDate(concStart)} — ${fmtDate(concEnd)}</div>`;
+      html += `<div class="pi-body">Роды ожидаются: ${fmtDate(birthStart)} — ${fmtDate(birthEnd)}</div>`;
+      plainText += `${zodiac.emoji} ${zodiac.name}\nОбщее окно: ${fmtDate(concStart)} — ${fmtDate(concEnd)}\nРоды: ${fmtDate(birthStart)} — ${fmtDate(birthEnd)}\n\n`;
+    }
+
+    li.innerHTML = html;
+    list.appendChild(li);
+  });
+
+  /* Ovulation note */
+  const ovNote = document.getElementById('ovulation-note');
+  ovNote.innerHTML = `🌿 <span>Расчёт учитывает цикл <b>${cycleLen} дн.</b>, лютеиновую фазу <b>${lutealDays} дн.</b>, окно фертильности <b>±${fertWindow} дн.</b> от овуляции. Беременность считается как 266 дней от зачатия.</span>`;
+
+  /* Store for copy */
+  document.getElementById('copy-area').textContent = plainText;
+
+  /* Show result */
+  const rc = document.getElementById('result-card');
+  rc.classList.add('visible');
+  setTimeout(()=>rc.scrollIntoView({behavior:'smooth',block:'start'}), 100);
+}
+
+/* ── Copy ── */
+function copyResult(){
+  const txt = document.getElementById('copy-area').textContent;
+  navigator.clipboard.writeText(txt).then(()=>{
+    const t = document.getElementById('copy-toast');
+    t.classList.add('show');
+    setTimeout(()=>t.classList.remove('show'), 2500);
+  }).catch(()=>{ alert('Скопируйте вручную:\n\n'+txt); });
+}
+
+/* ── Print ── */
+function printResult(){ window.print(); }
+
+/* ── Share ── */
+function shareResult(){
+  const txt = document.getElementById('copy-area').textContent;
+  if(navigator.share){
+    navigator.share({ title:'✨ Окна зачатия — ЗвёздоЧадо', text: txt });
+  } else {
+    const mailto = 'mailto:?subject=✨ Наши окна зачатия&body='+encodeURIComponent(txt);
+    window.open(mailto);
+  }
+}
+</script>
+</body>
+</html>
